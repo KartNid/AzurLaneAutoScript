@@ -167,7 +167,8 @@ class Hermit(Adb):
                 if b:
                     point = random_rectangle_point(b.button)
                     logger.info(f'Click {point2str(*point)} @ {b}')
-                    self.click_adb(*point)
+                    # Android hierarchy bounds already use native pixels.
+                    self.click_adb(*point, native=True)
                     return True
                 else:
                     return False
@@ -241,4 +242,5 @@ class Hermit(Adb):
 
     @retry
     def click_hermit(self, x, y):
+        x, y = self.control_point(x, y)
         self.hermit_send('/click', x=x, y=y)

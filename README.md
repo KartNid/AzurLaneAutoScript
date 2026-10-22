@@ -49,6 +49,8 @@ GUI development, thanks **[@18870](https://github.com/18870)** , say HURRAY.
 
 [设备支持文档](https://github.com/LmeSzinc/AzurLaneAutoScript/wiki/Emulator_cn)，包含模拟器运行、云手机运行以及解锁各种骚方式运行。
 
+支持 **1280×720 和 2560×1440** 的游戏画面，自动适配，无需修改资源坐标。1440P 画面在截图入口统一到识别坐标系，点击、滑动、拖拽和多点触控在对应后端映射回实际分辨率。配置与验证说明见 [1440P 分辨率支持](doc/Resolution.md)。
+
 
 
 ## 正确地使用调度器

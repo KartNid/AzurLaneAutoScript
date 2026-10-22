@@ -4,6 +4,7 @@ import struct
 import time
 
 import module.device.method.scrcpy.const as const
+from module.device.resolution import ASSET_SIZE, scale_point
 
 
 def inject(control_type: int):
@@ -44,6 +45,22 @@ class ControlSender:
     def resolution(self):
         return self.parent._scrcpy_resolution
 
+    def _control_point(self, x, y):
+        source = ASSET_SIZE
+        if self.resolution[0] < self.resolution[1]:
+            # Screenshot normalizes portrait frames after rotating them. Input
+            # coordinates must undo that rotation in the stream's coordinate space.
+            orientation = self.parent.orientation
+            if orientation == 1:
+                x, y = ASSET_SIZE[1] - y, x
+                source = ASSET_SIZE[::-1]
+            elif orientation == 3:
+                x, y = y, ASSET_SIZE[0] - x
+                source = ASSET_SIZE[::-1]
+        x, y = scale_point(x, y, source, self.resolution)
+        return (max(0, min(int(x), self.resolution[0] - 1)),
+                max(0, min(int(y), self.resolution[1] - 1)))
+
     @inject(const.TYPE_INJECT_KEYCODE)
     def keycode(
             self, keycode: int, action: int = const.ACTION_DOWN, repeat: int = 0
@@ -83,7 +100,7 @@ class ControlSender:
             action: ACTION_DOWN | ACTION_UP | ACTION_MOVE
             touch_id: Default using virtual id -1, you can specify it to emulate multi finger touch
         """
-        x, y = max(x, 0), max(y, 0)
+        x, y = self._control_point(x, y)
         return struct.pack(
             ">BqiiHHHi",
             action,
@@ -108,7 +125,7 @@ class ControlSender:
             v: vertical movement
         """
 
-        x, y = max(x, 0), max(y, 0)
+        x, y = self._control_point(x, y)
         return struct.pack(
             ">iiHHii",
             int(x),

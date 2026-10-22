@@ -239,6 +239,11 @@ class CommandBuilder:
         self.handle_orientation = handle_orientation
 
     @property
+    def normalized_coordinates(self):
+        # atx-agent expects fractions of the display, not physical pixels.
+        return self.device.config.DEVICE_OVER_HTTP
+
+    @property
     def orientation(self):
         if self.handle_orientation:
             return self.device.orientation
@@ -263,7 +268,7 @@ class CommandBuilder:
             raise ScriptError(f'Invalid device orientation: {orientation}')
 
         self.max_x, self.max_y = max_x, max_y
-        if not self.device.config.DEVICE_OVER_HTTP:
+        if not self.normalized_coordinates:
             # Maximum X and Y coordinates may, but usually do not, match the display size.
             x, y = int(x / 1280 * max_x), int(y / 720 * max_y)
         else:

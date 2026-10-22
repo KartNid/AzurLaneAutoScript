@@ -17,6 +17,7 @@ from module.device.method.ldopengl import LDOpenGL
 from module.device.method.nemu_ipc import NemuIpc
 from module.device.method.scrcpy import Scrcpy
 from module.device.method.wsa import WSA
+from module.device.resolution import ASSET_SIZE, SUPPORTED_SCREEN_SIZES, landscape_size, normalize_screenshot
 from module.exception import RequestHumanTakeover, ScriptError
 from module.logger import logger
 
@@ -28,6 +29,7 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
     _screenshot_interval = Timer(0.1)
     _last_save_time = {}
     image: np.ndarray
+    image_native: np.ndarray
 
     @cached_property
     def screenshot_methods(self):
@@ -64,15 +66,19 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
             method = self.screenshot_methods.get(method, self.screenshot_adb)
             self.image = method()
 
+            self.image = self._handle_orientated_image(self.image)
+            size_valid = self.check_screen_size()
+            self.image_native = self.image
+            self.image = normalize_screenshot(self.image)
+
             if self.config.Emulator_ScreenshotDedithering:
                 # This will take 40-60ms
                 cv2.fastNlMeansDenoising(self.image, self.image, h=17, templateWindowSize=1, searchWindowSize=2)
-            self.image = self._handle_orientated_image(self.image)
 
             if self.config.Error_SaveError:
                 self.screenshot_deque.append({'time': datetime.now(), 'image': self.image})
 
-            if self.check_screen_size() and self.check_screen_black():
+            if size_valid and self.check_screen_black():
                 break
             else:
                 continue
@@ -91,11 +97,12 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
         Returns:
             np.ndarray:
         """
-        width, height = image_size(self.image)
-        if width == 1280 and height == 720:
+        width, height = image_size(image)
+        if (width, height) in SUPPORTED_SCREEN_SIZES:
             return image
 
-        # Rotate screenshots only when they're not 1280x720
+        # Several backends already return landscape pixels on portrait devices.
+        # Rotating those again would turn a valid 1440P frame on its side.
         if self.orientation == 0:
             pass
         elif self.orientation == 1:
@@ -204,27 +211,26 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
 
     def check_screen_size(self):
         """
-        Screen size must be 1280x720.
+        Validate native resolution before normalizing to asset coordinates.
         Take a screenshot before call.
         """
-        if self._screen_size_checked:
-            return True
-
         orientated = False
         for _ in range(2):
             # Check screen size
             width, height = image_size(self.image)
-            logger.attr('Screen_size', f'{width}x{height}')
-            if width == 1280 and height == 720:
+            if not self._screen_size_checked or landscape_size(width, height) != self._native_screen_size:
+                logger.attr('Screen_size', f'{width}x{height}')
+            if (width, height) in SUPPORTED_SCREEN_SIZES:
+                self.set_screen_size(width, height)
                 self._screen_size_checked = True
                 return True
-            elif not orientated and (width == 720 and height == 1280):
+            elif not orientated and landscape_size(width, height) in SUPPORTED_SCREEN_SIZES:
                 logger.info('Received orientated screenshot, handling')
                 self.get_orientation()
                 self.image = self._handle_orientated_image(self.image)
                 orientated = True
                 width, height = image_size(self.image)
-                if width == 720 and height == 1280:
+                if width < height:
                     logger.info('Unable to handle orientated screenshot, continue for now')
                     return True
                 else:
@@ -237,7 +243,7 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
                 return True
             else:
                 logger.critical(f'Resolution not supported: {width}x{height}')
-                logger.critical('Please set emulator resolution to 1280x720')
+                logger.critical('Please set emulator resolution to 1280x720 or 2560x1440')
                 raise RequestHumanTakeover
 
     def check_screen_black(self):
@@ -245,7 +251,7 @@ class Screenshot(Adb, WSA, DroidCast, AScreenCap, Scrcpy, NemuIpc, LDOpenGL):
             return True
         # Check screen color
         # May get a pure black screenshot on some emulators.
-        color = get_color(self.image, area=(0, 0, 1280, 720))
+        color = get_color(self.image, area=(0, 0, *ASSET_SIZE))
         if sum(color) < 1:
             if self.config.Emulator_Serial == 'wsa-0':
                 for _ in range(2):

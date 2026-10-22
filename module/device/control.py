@@ -7,6 +7,7 @@ from module.device.method.maatouch import MaaTouch
 from module.device.method.minitouch import Minitouch
 from module.device.method.nemu_ipc import NemuIpc
 from module.device.method.scrcpy import Scrcpy
+from module.device.method.utils import HierarchyButton
 from module.logger import logger
 
 
@@ -21,6 +22,7 @@ class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
             'ADB': self.click_adb,
             'uiautomator2': self.click_uiautomator2,
             'minitouch': self.click_minitouch,
+            'scrcpy': self.click_scrcpy,
             'Hermit': self.click_hermit,
             'MaaTouch': self.click_maatouch,
             'nemu_ipc': self.click_nemu_ipc,
@@ -40,6 +42,11 @@ class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
         logger.info(
             'Click %s @ %s' % (point2str(x, y), button)
         )
+        if isinstance(button, HierarchyButton):
+            # Android settings may be portrait even though the game is landscape.
+            # Hierarchy bounds are native Android pixels, so inject them directly.
+            self.click_adb(x, y, native=True)
+            return
         method = self.click_methods.get(
             self.config.Emulator_ControlMethod,
             self.click_adb
@@ -71,6 +78,9 @@ class Control(Hermit, Minitouch, Scrcpy, MaaTouch, NemuIpc):
         logger.info(
             'Click %s @ %s, %s' % (point2str(x, y), button, duration)
         )
+        if isinstance(button, HierarchyButton):
+            self.swipe_adb((x, y), (x, y), duration, native=True)
+            return
         method = self.config.Emulator_ControlMethod
         if method == 'minitouch':
             self.long_click_minitouch(x, y, duration)

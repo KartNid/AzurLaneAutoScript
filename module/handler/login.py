@@ -269,8 +269,7 @@ class LoginHandler(UI):
             self.device.click(USER_LOGIN_BTN)
             return True
 
-    @staticmethod
-    def get_for_any_ele(list_u2_path: list) -> Union[bool, tuple]:
+    def get_for_any_ele(self, list_u2_path: list) -> Union[bool, tuple]:
         """
         Args:
             list_u2_path (list): [UiObject or XPathSelector]  In this case, len(list_u2_path) >= 1
@@ -282,12 +281,12 @@ class LoginHandler(UI):
             try:
                 if isinstance(path, UiObject):
                     if path.exists():
-                        return path.bounds()
+                        return self.device.logical_area(path.bounds())
                     elif not path.exists():
                         continue
                 elif isinstance(path, XPathSelector):
                     if path.exists:
-                        return path.bounds
+                        return self.device.logical_area(path.bounds)
                     elif not path.exists:
                         continue
             except XPathElementNotFoundError:

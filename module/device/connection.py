@@ -18,6 +18,7 @@ from module.config.deep import deep_get
 from module.config.server import VALID_CHANNEL_PACKAGE, VALID_PACKAGE, set_server
 from module.device.connection_attr import ConnectionAttr
 from module.device.env import IS_LINUX, IS_MACINTOSH, IS_WINDOWS
+from module.device.resolution import Resolution
 from module.device.method.pool import WORKER_POOL
 from module.device.method.remove_warning import remove_shell_warning
 from module.device.method.utils import (PackageNotInstalled, RETRY_TRIES, get_serial_pair, handle_adb_error,
@@ -107,7 +108,7 @@ class AdbDeviceWithStatus(AdbDevice):
         return 16384 <= self.port <= 17408
 
 
-class Connection(ConnectionAttr):
+class Connection(Resolution, ConnectionAttr):
     def __init__(self, config):
         """
         Args:
@@ -869,6 +870,9 @@ class Connection(ConnectionAttr):
         return True
 
     def release_resource(self):
+        self._native_screen_size = None
+        self._screen_size_checked = False
+        self._screen_black_checked = False
         del_cached_property(self, 'hermit_session')
         del_cached_property(self, 'droidcast_session')
         del_cached_property(self, '_minitouch_builder')

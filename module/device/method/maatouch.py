@@ -98,6 +98,12 @@ def retry(func):
 
 
 class MaatouchBuilder(CommandBuilder):
+    @property
+    def normalized_coordinates(self):
+        # MaaTouch always consumes the pixel range from its handshake, even
+        # when ADB is being accessed through an HTTP uiautomator2 connection.
+        return False
+
     def __init__(
             self,
             device,

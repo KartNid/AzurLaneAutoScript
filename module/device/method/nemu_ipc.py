@@ -601,15 +601,26 @@ class NemuIpc(Platform):
         cv2.flip(image, 0, dst=image)
         return image
 
+    def nemu_ipc_down(self, x, y):
+        # NemuIpcImpl.down applies its own axis rotation after this conversion.
+        # Use its display size, including when called before the first screenshot.
+        ipc = self.nemu_ipc
+        if not ipc.width or not ipc.height:
+            ipc.get_resolution()
+        size = max(ipc.width, ipc.height), min(ipc.width, ipc.height)
+        self.set_screen_size(*size)
+        x, y = self.control_point(x, y, size=size)
+        ipc.down(x, y)
+
     def click_nemu_ipc(self, x, y):
         down = ensure_time((0.010, 0.020))
-        self.nemu_ipc.down(x, y)
+        self.nemu_ipc_down(x, y)
         self.sleep(down)
         self.nemu_ipc.up()
         self.sleep(0.050 - down)
 
     def long_click_nemu_ipc(self, x, y, duration=1.0):
-        self.nemu_ipc.down(x, y)
+        self.nemu_ipc_down(x, y)
         self.sleep(duration)
         self.nemu_ipc.up()
         self.sleep(0.050)
@@ -618,7 +629,7 @@ class NemuIpc(Platform):
         points = insert_swipe(p0=p1, p3=p2)
 
         for point in points:
-            self.nemu_ipc.down(*point)
+            self.nemu_ipc_down(*point)
             self.sleep(0.010)
 
         self.nemu_ipc.up()
@@ -630,17 +641,17 @@ class NemuIpc(Platform):
         points = insert_swipe(p0=p1, p3=p2, speed=20)
 
         for point in points:
-            self.nemu_ipc.down(*point)
+            self.nemu_ipc_down(*point)
             self.sleep(0.010)
 
-        self.nemu_ipc.down(*p2)
+        self.nemu_ipc_down(*p2)
         self.sleep(0.140)
-        self.nemu_ipc.down(*p2)
+        self.nemu_ipc_down(*p2)
         self.sleep(0.140)
 
         hold_duration = ensure_time(hold_duration) - 0.28
         if hold_duration > 0:
-            self.nemu_ipc.down(*p2)
+            self.nemu_ipc_down(*p2)
             self.sleep(hold_duration)
 
         self.nemu_ipc.up()

@@ -12,6 +12,7 @@ from module.base.timer import Timer
 from module.device.method.uiautomator_2 import ProcessInfo, Uiautomator2
 from module.device.method.utils import (
     ImageTruncated, PackageNotInstalled, RETRY_TRIES, handle_adb_error, handle_unknown_host_service, retry_sleep)
+from module.device.resolution import SUPPORTED_SCREEN_SIZES
 from module.exception import RequestHumanTakeover
 from module.logger import logger
 
@@ -204,7 +205,7 @@ class DroidCast(Uiautomator2):
         image = np.frombuffer(image, np.uint8)
         if image is None:
             raise ImageTruncated('Empty image after reading from buffer')
-        if image.shape == (1843200,):
+        if image.size in [w * h * 2 for w, h in SUPPORTED_SCREEN_SIZES]:
             raise DroidCastVersionIncompatible('Requesting screenshots from `DroidCast` but server is `DroidCast_raw`')
         if image.size < 500:
             logger.warning(f'Unexpected screenshot: {resp.content}')
@@ -226,7 +227,7 @@ class DroidCast(Uiautomator2):
     @retry
     def screenshot_droidcast_raw(self):
         self.config.DROIDCAST_VERSION = 'DroidCast_raw'
-        shape = (720, 1280)
+        shape = self.native_screen_size[::-1]
         if self.is_mumu_over_version_356:
             if not self.droidcast_width or not self.droidcast_height:
                 self._droidcast_update_resolution()
@@ -249,6 +250,10 @@ class DroidCast(Uiautomator2):
             else:
                 arr = arr.reshape(shape)
         except ValueError as e:
+            # Re-query native dimensions on the next attempt after a display
+            # size change; don't repeatedly reshape 1440P bytes as a cached 720P frame.
+            self._native_screen_size = None
+            self.droidcast_width = self.droidcast_height = 0
             if len(image) < 500:
                 logger.warning(f'Unexpected screenshot: {image}')
             # Try to load as `DroidCast`

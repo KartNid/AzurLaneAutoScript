@@ -7,7 +7,7 @@ class ScrcpyOptions:
     frame_rate = 6
 
     @classmethod
-    def codec_options(cls) -> str:
+    def codec_options(cls, max_size=1280) -> str:
         """
         Custom codec options passing through scrcpy.
         https://developer.android.com/reference/android/media/MediaFormat
@@ -20,8 +20,9 @@ class ScrcpyOptions:
             # https://developer.android.com/reference/android/media/MediaCodecInfo.CodecProfileLevel
             # Baseline, which only has I/P frames
             key_profile=1,
-            # Level 4.1, for 1280x720@30fps
-            key_level=4096,
+            # 1440P exceeds the per-frame macroblock limit of level 4.1.
+            # Keep the old level for 720P encoders and use level 5 for 1440P.
+            key_level=4096 if max_size <= 1280 else 16384,
             # Max quality
             key_quality=100,
             # https://developer.android.com/reference/android/media/MediaCodecInfo.EncoderCapabilities
@@ -40,7 +41,7 @@ class ScrcpyOptions:
         return ','.join([f'{k}={v}' for k, v in options.items()])
 
     @classmethod
-    def arguments(cls) -> t.List[str]:
+    def arguments(cls, max_size=1280) -> t.List[str]:
         """
         https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/Server.java
         https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/Options.java
@@ -50,7 +51,7 @@ class ScrcpyOptions:
         """
         options = [
             'log_level=info',
-            'max_size=1280',
+            f'max_size={max_size}',
             # 20Mbps, the maximum output bitrate of scrcpy
             # If a higher value is set, scrcpy fallback to 8Mbps default.
             'bit_rate=20000000',
@@ -78,7 +79,7 @@ class ScrcpyOptions:
             # Empty value, let scrcpy to decide
             # 'encoder_name=',
             # Codec options
-            f'codec_options={cls.codec_options()}',
+            f'codec_options={cls.codec_options(max_size=max_size)}',
             # Useless, always false
             'power_off_on_close=false',
             'clipboard_autosync=false',
@@ -87,7 +88,7 @@ class ScrcpyOptions:
         return options
 
     @classmethod
-    def command_v125(cls, jar_path='/data/local/tmp/scrcpy-server.jar') -> t.List[str]:
+    def command_v125(cls, jar_path='/data/local/tmp/scrcpy-server.jar', max_size=1280) -> t.List[str]:
         """
         Generate the commands to run scrcpy.
         """
@@ -98,11 +99,11 @@ class ScrcpyOptions:
             'com.genymobile.scrcpy.Server',
             '1.25',
         ]
-        commands += cls.arguments()
+        commands += cls.arguments(max_size=max_size)
         return commands
 
     @classmethod
-    def command_v120(cls, jar_path='/data/local/tmp/scrcpy-server.jar') -> t.List[str]:
+    def command_v120(cls, jar_path='/data/local/tmp/scrcpy-server.jar', max_size=1280) -> t.List[str]:
         commands = [
             f"CLASSPATH={jar_path}",
             "app_process",
@@ -110,7 +111,7 @@ class ScrcpyOptions:
             "com.genymobile.scrcpy.Server",
             "1.20",  # Scrcpy server version
             "info",  # Log level: info, verbose...
-            f"1280",  # Max screen width (long side)
+            str(max_size),  # Preserve the native screen width (long side)
             f"20000000",  # Bitrate of video
             f"{cls.frame_rate}",  # Max frame per second
             f"{const.LOCK_SCREEN_ORIENTATION_UNLOCKED}",  # Lock screen orientation: LOCK_SCREEN_ORIENTATION
@@ -121,7 +122,7 @@ class ScrcpyOptions:
             "0",  # Display id
             "false",  # Show touches
             "false",  # Stay awake
-            cls.codec_options(),  # Codec (video encoding) options
+            cls.codec_options(max_size=max_size),  # Codec (video encoding) options
             "-",  # Encoder name
             "false",  # Power off screen after server closed
         ]

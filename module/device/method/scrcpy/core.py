@@ -35,7 +35,9 @@ class ScrcpyCore(Connection):
     _scrcpy_server_stream: t.Optional[AdbConnection] = None
     _scrcpy_video_socket: t.Optional[socket.socket] = None
     _scrcpy_control_socket: t.Optional[socket.socket] = None
-    _scrcpy_control_socket_lock = threading.Lock()
+    # Gestures hold this lock while ControlSender serializes individual events.
+    # Both levels must be able to acquire it on the same thread.
+    _scrcpy_control_socket_lock = threading.RLock()
 
     _scrcpy_stream_loop_thread = None
     _scrcpy_resolution: t.Tuple[int, int] = (1280, 720)
@@ -69,7 +71,8 @@ class ScrcpyCore(Connection):
             socket.timeout:
         """
         logger.hr('Scrcpy server start')
-        commands = ScrcpyOptions.command_v120(jar_path=self.config.SCRCPY_FILEPATH_REMOTE)
+        commands = ScrcpyOptions.command_v120(
+            jar_path=self.config.SCRCPY_FILEPATH_REMOTE, max_size=max(self.native_screen_size))
         self._scrcpy_server_stream: AdbConnection = self.adb.shell(
             commands,
             stream=True,

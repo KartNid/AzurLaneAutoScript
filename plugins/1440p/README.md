@@ -1,4 +1,4 @@
-# Alas 1440P 外置插件 0.1.0
+# Alas 1440P 外置插件 0.1.1
 
 在原版 720P Alas 上加载 2560×1440 兼容层，保留 1280×720 支持。
 原版源码、启动器、游戏资源和在线更新继续由上游管理；插件独立安装、停用和卸载。
@@ -6,6 +6,15 @@
 原版没有通用设备插件 API。此插件通过 Python 的 `.pth` 启动入口注册导入适配器，
 在内存中加载 1440P 兼容逻辑。安装位置为所选 Python 环境的 `site-packages`，
 原版 Git 跟踪的文件保持不变。
+
+## 0.1.1 修复
+
+修复国服真实 1440P 画面中两处文字模板差异：补给商店导航和关卡准备窗口的周回模式标题。
+原版匹配失败时，插件只对这两个按钮使用实测的局部模板，仍使用原版匹配阈值和搜索范围。
+720P、其他区服、周回解锁条件、自律寻敌设置和舰队战斗模式继续沿用原版判断。
+
+Windows 自带 Python 3.7.6、MuMu12、2560×1440/360 DPI、nemu_ipc 截图和 minitouch 控制已实测。
+主线图2的 13-4 已通过原版启动器验证自动寻敌；更多测试记录见 `VALIDATION.md`。
 
 ## 安装
 
@@ -15,7 +24,7 @@
 2. 解压本插件，双击 `install-plugin.cmd`，输入原版 Alas 的目录。
    插件会使用该目录的 `toolkit\python.exe` 安装并检查启动加载能力。
 3. 将模拟器设置为 1280×720 或 2560×1440，继续通过**原版 `Alas.exe`** 启动。
-   成功加载时会输出 `[Alas 1440P plugin 0.1.0] active`。
+   成功加载时会输出 `[Alas 1440P plugin 0.1.1] active`。
 
 也可以在命令行安装：
 
@@ -71,9 +80,8 @@
 覆盖 ADB、uiautomator2、minitouch、MaaTouch、Hermit、scrcpy 和 nemu_ipc 输入，
 包含 DroidCast_raw 原始帧、Android 控件树与后宅持续按压的适配。
 
-插件迁移了已有 1440P 逻辑。插件化解决更新与部署耦合，
-**现有识别失败和部分关卡控制异常仍需具体关卡、截图、日志和控制后端来定位**。
-本版本是验证版，尚未完成 Windows 和模拟器实机验收。
+插件迁移了已有 1440P 逻辑。0.1.1 已修复并验证本次商店导航和主线周回识别故障。
+验证范围为上述本地环境；其他关卡、区服和模拟器仍需各自的截图与日志验证。
 
 通用商店识别、主线周回/自律异常的本地调试，可将
 [本地调试提示词](LOCAL_DEBUG_PROMPT.zh-CN.md)交给本地 Codex 窗口继续取证和修复。
@@ -92,7 +100,7 @@
 
 适配基线为上游 `master@4d88c22d875de3192f8cae2f993e4fe0593114e0`；
 兼容逻辑来自原 `feature/1440p-support@2efcbcb4d07bcff5798e577e9f26c4d6d30dc6a4`。
-`alas_1440p/patches.json` 保存 16 个模块、47 处适配的结构校验和代码。
+`alas_1440p/patches.json` 保存 18 个模块、49 处适配的结构校验和代码。
 加载器仅改写内存中的语法树，不覆盖上游文件或缓存修改后的 `.pyc`。
 
 使用已有 Alas 测试环境运行：
@@ -107,5 +115,5 @@ ALAS_PLUGIN_TEST_ROOT=/path/to/official/Alas python -m pytest tests /path/to/off
 python tools/generate_manifest.py --repo /path/to/AzurLaneAutoScript
 ```
 
-当前验证：1472 passed、8 skipped；详情见 `VALIDATION.md`。
+当前 Windows 回归：1486 passed、8 skipped；详情见 `VALIDATION.md`。
 插件及衍生代码遵循仓库的 GPL-3.0 许可，见 `LICENSE`。

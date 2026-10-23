@@ -32,7 +32,7 @@ def run(arguments, cwd, **kwargs):
 
 def test_unrelated_upstream_updates_are_preserved(checkout):
     path = checkout / 'module/device/connection.py'
-    path.write_text(path.read_text() + '\nUPSTREAM_NEW_FEATURE = True\n', encoding='utf-8')
+    path.write_text(path.read_text(encoding='utf-8') + '\nUPSTREAM_NEW_FEATURE = True\n', encoding='utf-8')
     before = hashlib.sha256(path.read_bytes()).hexdigest()
     codes = check(checkout)
     assert 'UPSTREAM_NEW_FEATURE' in codes['module.device.connection'].co_names
@@ -99,22 +99,33 @@ def worker(queue, root):
 if __name__ == '__main__':
     import alas_1440p.loader as loader
     assert loader._finder is not None
-    context = multiprocessing.get_context('spawn')
-    queue = context.Queue()
-    process = context.Process(target=worker, args=(queue, sys.argv[1]))
-    process.start()
-    value = queue.get(timeout=30)
-    process.join(timeout=30)
-    assert process.exitcode == 0
+    if sys.platform == 'win32' and sys.version_info[:2] == (3, 7):
+        # Bundled 3.7's venv spawn redirects into base Alas. Check a fresh
+        # venv subprocess here; verify actual Alas spawn in the real runtime.
+        import subprocess
+        code = ('import json,sys; from pathlib import Path; '
+                'import alas_1440p.loader as p; r=Path(sys.argv[1]).resolve(); '
+                'print(json.dumps([r in p._finder.roots,len(p._finder.prepare(r))]))')
+        value = json.loads(subprocess.check_output([sys.executable, '-I', '-c', code, sys.argv[1]],
+                                                   universal_newlines=True, timeout=30))
+    else:
+        context = multiprocessing.get_context('spawn')
+        queue = context.Queue()
+        process = context.Process(target=worker, args=(queue, sys.argv[1]))
+        process.start()
+        value = queue.get(timeout=30)
+        process.join(timeout=30)
+        assert process.exitcode == 0
     print(json.dumps(value))
 ''', encoding='utf-8')
-    assert json.loads(run([executable, worker, checkout], tmp_path)) == [True, 16]
+    expected = [True, len(manifest()['modules'])]
+    assert json.loads(run([executable, worker, checkout], tmp_path)) == expected
     run(['git', 'reset', '--hard', 'HEAD'], checkout)
-    assert json.loads(run([executable, worker, checkout], tmp_path)) == [True, 16]
+    assert json.loads(run([executable, worker, checkout], tmp_path)) == expected
     run([executable, '-m', 'alas_1440p', 'disable'], tmp_path)
     assert run([executable, '-I', '-c', 'import alas_1440p.loader as p; print(p._finder is None)'], tmp_path) == 'True'
     run([executable, '-m', 'alas_1440p', 'enable'], tmp_path)
-    assert json.loads(run([executable, worker, checkout], tmp_path)) == [True, 16]
+    assert json.loads(run([executable, worker, checkout], tmp_path)) == expected
     # Reinstallation exercises the installed old package's startup hook too.
     run([executable, ROOT / 'install.py', '--alas', checkout], tmp_path)
     run([executable, ROOT / 'install.py', '--alas', checkout, '--uninstall'], tmp_path)

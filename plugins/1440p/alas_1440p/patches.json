@@ -499,6 +499,34 @@
           "source": "@cached_property\ndef image_homo(self):\n    image_edge = rgb2gray(self.image_trans)\n    image_edge = cv2.Canny(image_edge, 100, 150)\n    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))\n    cv2.morphologyEx(image_edge, cv2.MORPH_CLOSE, kernel, dst=image_edge)\n    return image_edge\n"
         }
       ]
+    },
+    "module.shop.ui": {
+      "path": "module/shop/ui.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:ShopUI:0",
+            "function:shop_nav_250814:0"
+          ],
+          "before": "b7e185f635ec7256f186f24d139b2bd9410ef7a895909bab7ef6237604b4edd2",
+          "source": "@cached_property\ndef shop_nav_250814(self):\n    from alas_1440p.recognition import HighResolutionSwitch\n    switch = HighResolutionSwitch('shop_nav_250814', is_selector=True, offset=(20, 20))\n    switch.add_state(NAV_GENERAL, check_button=NAV_GENERAL)\n    switch.add_state(NAV_MONTHLY, check_button=NAV_MONTHLY)\n    return switch\n"
+        }
+      ]
+    },
+    "module.handler.fast_forward": {
+      "path": "module/handler/fast_forward.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:SwitchClearMode:0",
+            "function:get:0"
+          ],
+          "before": "907fe54702d53bd993f241bcfdf95b85d19dec4ee8b1809fc27afffdb6aaf77c",
+          "source": "def get(self, main):\n    from alas_1440p.recognition import match_1440p\n    title = main.appear(CLEAR_MODE_TITLE, offset=(20, 20)) or match_1440p(main, CLEAR_MODE_TITLE)\n    if not title:\n        return 'unknown'\n    CLEAR_MODE_CHECK.load_offset(CLEAR_MODE_TITLE)\n    if main.image_color_count(CLEAR_MODE_CHECK.button, color=(130, 229, 255), threshold=30, count=50):\n        return 'on'\n    if main.image_color_count(CLEAR_MODE_CHECK.button, color=(255, 255, 255), threshold=30, count=200):\n        return 'off'\n    return 'unknown'\n"
+        }
+      ]
     }
   }
 }

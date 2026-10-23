@@ -1,0 +1,6 @@
+__pycache__/
+.pytest_cache/
+*.pyc
+*.log
+test-results.xml
+alas_1440p/settings.json

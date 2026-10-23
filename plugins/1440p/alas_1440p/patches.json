@@ -1,0 +1,504 @@
+{
+  "schema": 1,
+  "baseline": "4d88c22d875de3192f8cae2f993e4fe0593114e0",
+  "feature": "2efcbcb4d07bcff5798e577e9f26c4d6d30dc6a4",
+  "modules": {
+    "module.device.connection": {
+      "path": "module/device/connection.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "statement:106eed3ac073cba7fac209977cef4532252c1c84d022170cadc780764b0ac258:0"
+          ],
+          "after": "statement:b54a63368b2fd55a5c43cca46c8dffdf81d60278f11238706a5eab39ee8c5c0c:0",
+          "source": "from module.device.resolution import Resolution\n"
+        },
+        {
+          "action": "header",
+          "path": [
+            "class:Connection:0"
+          ],
+          "before": "73e6a7ce183e0513e4c0cbd033d8716c79971bddd2991a19dc2f5501c6eae130",
+          "source": "class Connection(Resolution, ConnectionAttr):\n    pass"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Connection:0",
+            "function:release_resource:0"
+          ],
+          "before": "b0b0c7241885700933957b2c2778604e3815a9475671afabda35b7b5922b60f2",
+          "source": "def release_resource(self):\n    self._native_screen_size = None\n    self._screen_size_checked = False\n    self._screen_black_checked = False\n    del_cached_property(self, 'hermit_session')\n    del_cached_property(self, 'droidcast_session')\n    del_cached_property(self, '_minitouch_builder')\n    del_cached_property(self, '_maatouch_builder')\n    del_cached_property(self, 'reverse_server')\n"
+        }
+      ]
+    },
+    "module.device.control": {
+      "path": "module/device/control.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "statement:8a766c590add331f57ddc8c3a67ea614dd22cf4c78b6ff4df8652289c76b6f92:0"
+          ],
+          "after": "statement:caef16e9387b67b31faa6b9d127e76c57419ed5a9a3921550808853822a50784:0",
+          "source": "from module.device.method.utils import HierarchyButton\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Control:0",
+            "function:click_methods:0"
+          ],
+          "before": "e8e2189052da89efc894b2b043f12bf78b6a95b38c8505e70e2b314a4075d78e",
+          "source": "@cached_property\ndef click_methods(self):\n    return {\n        'ADB': self.click_adb,\n        'uiautomator2': self.click_uiautomator2,\n        'minitouch': self.click_minitouch,\n        'scrcpy': self.click_scrcpy,\n        'Hermit': self.click_hermit,\n        'MaaTouch': self.click_maatouch,\n        'nemu_ipc': self.click_nemu_ipc,\n    }\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Control:0",
+            "function:click:0"
+          ],
+          "before": "66db154c888d01018f896d2106856d3d5b7ab2c3d71bd5f51eeb0fe7ba3b2822",
+          "source": "def click(self, button, control_check=True):\n    \"\"\"Method to click a button.\n\n    Args:\n        button (button.Button): AzurLane Button instance.\n        control_check (bool):\n    \"\"\"\n    if control_check:\n        self.handle_control_check(button)\n    x, y = random_rectangle_point(button.button)\n    x, y = ensure_int(x, y)\n    logger.info(\n        'Click %s @ %s' % (point2str(x, y), button)\n    )\n    if isinstance(button, HierarchyButton):\n        # Android settings may be portrait even though the game is landscape.\n        # Hierarchy bounds are native Android pixels, so inject them directly.\n        self.click_adb(x, y, native=True)\n        return\n    method = self.click_methods.get(\n        self.config.Emulator_ControlMethod,\n        self.click_adb\n    )\n    method(x, y)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Control:0",
+            "function:long_click:0"
+          ],
+          "before": "742819645d710fbe711a8c811b2d85a40e6b395a14fe1da70b06c2dd11d31e25",
+          "source": "def long_click(self, button, duration=(1, 1.2)):\n    \"\"\"Method to long click a button.\n\n    Args:\n        button (button.Button): AzurLane Button instance.\n        duration(int, float, tuple):\n    \"\"\"\n    self.handle_control_check(button)\n    x, y = random_rectangle_point(button.button)\n    x, y = ensure_int(x, y)\n    duration = ensure_time(duration)\n    logger.info(\n        'Click %s @ %s, %s' % (point2str(x, y), button, duration)\n    )\n    if isinstance(button, HierarchyButton):\n        self.swipe_adb((x, y), (x, y), duration, native=True)\n        return\n    method = self.config.Emulator_ControlMethod\n    if method == 'minitouch':\n        self.long_click_minitouch(x, y, duration)\n    elif method == 'uiautomator2':\n        self.long_click_uiautomator2(x, y, duration)\n    elif method == 'scrcpy':\n        self.long_click_scrcpy(x, y, duration)\n    elif method == 'MaaTouch':\n        self.long_click_maatouch(x, y, duration)\n    elif method == 'nemu_ipc':\n        self.long_click_nemu_ipc(x, y, duration)\n    else:\n        self.swipe_adb((x, y), (x, y), duration)\n"
+        }
+      ]
+    },
+    "module.device.method.adb": {
+      "path": "module/device/method/adb.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:Adb:0",
+            "function:click_adb:0"
+          ],
+          "before": "cf5825867380c8c062a9bcec92e4212397ec9004735f8d807886def27cf6c51c",
+          "source": "@retry\ndef click_adb(self, x, y, native=False):\n    if not native:\n        x, y = self.control_point(x, y)\n    start = time.time()\n    self.adb_shell(['input', 'tap', x, y])\n    if time.time() - start <= 0.05:\n        self.sleep(0.05)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Adb:0",
+            "function:swipe_adb:0"
+          ],
+          "before": "43cd06b4c85ab65b418527f4c3d2cf0d01a58fa37c5aa2e00a3ecc365c59900a",
+          "source": "@retry\ndef swipe_adb(self, p1, p2, duration=0.1, native=False):\n    if not native:\n        p1, p2 = self.control_point(*p1), self.control_point(*p2)\n    duration = int(duration * 1000)\n    self.adb_shell(['input', 'swipe', *p1, *p2, duration])\n"
+        }
+      ]
+    },
+    "module.device.method.droidcast": {
+      "path": "module/device/method/droidcast.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "statement:f0a83120dbfcf54114ea90493d749b6fb882991deeb5256726d04d4311fd4f84:0"
+          ],
+          "after": "statement:3fc883d15fd86f108b0970a8decfdf8dbf72dab9d878473cd488502abef0d03e:0",
+          "source": "from module.device.resolution import SUPPORTED_SCREEN_SIZES\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:DroidCast:0",
+            "function:screenshot_droidcast:0"
+          ],
+          "before": "6c639dc40093e1fcbb6fea1f3e080a74f0d398089861afd6d1f1d16faf205810",
+          "source": "@retry\ndef screenshot_droidcast(self):\n    self.config.DROIDCAST_VERSION = 'DroidCast'\n    if self.is_mumu_over_version_356:\n        if not self.droidcast_width or not self.droidcast_height:\n            self._droidcast_update_resolution()\n\n    resp = self.droidcast_session.get(self.droidcast_url(), timeout=3)\n\n    if resp.status_code == 404:\n        raise DroidCastVersionIncompatible('DroidCast server does not have /preview')\n    image = resp.content\n    image = np.frombuffer(image, np.uint8)\n    if image is None:\n        raise ImageTruncated('Empty image after reading from buffer')\n    if image.size in [w * h * 2 for w, h in SUPPORTED_SCREEN_SIZES]:\n        raise DroidCastVersionIncompatible('Requesting screenshots from `DroidCast` but server is `DroidCast_raw`')\n    if image.size < 500:\n        logger.warning(f'Unexpected screenshot: {resp.content}')\n\n    image = cv2.imdecode(image, cv2.IMREAD_COLOR)\n    if image is None:\n        raise ImageTruncated('Empty image after cv2.imdecode')\n\n    cv2.cvtColor(image, cv2.COLOR_BGR2RGB, dst=image)\n    if image is None:\n        raise ImageTruncated('Empty image after cv2.cvtColor')\n\n    if self.is_mumu_over_version_356:\n        if self.orientation == 1:\n            image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)\n\n    return image\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:DroidCast:0",
+            "function:screenshot_droidcast_raw:0"
+          ],
+          "before": "66a1e8016de7d478eccab74bc302ead43c6f20a7be594dd9b2207be772141ba8",
+          "source": "@retry\ndef screenshot_droidcast_raw(self):\n    self.config.DROIDCAST_VERSION = 'DroidCast_raw'\n    shape = self.native_screen_size[::-1]\n    if self.is_mumu_over_version_356:\n        if not self.droidcast_width or not self.droidcast_height:\n            self._droidcast_update_resolution()\n        if self.droidcast_height and self.droidcast_width:\n            shape = (self.droidcast_height, self.droidcast_width)\n\n    rotate = self.is_mumu_over_version_356 and self.orientation == 1\n\n    image = self.droidcast_session.get(self.droidcast_raw_url(), timeout=3).content\n    # DroidCast_raw returns a RGB565 bitmap\n\n    try:\n        arr = np.frombuffer(image, dtype=np.uint16)\n        if rotate:\n            arr = arr.reshape(shape)\n            # arr = cv2.rotate(arr, cv2.ROTATE_90_CLOCKWISE)\n            # A little bit faster?\n            arr = cv2.transpose(arr)\n            cv2.flip(arr, 1, dst=arr)\n        else:\n            arr = arr.reshape(shape)\n    except ValueError as e:\n        # Re-query native dimensions on the next attempt after a display\n        # size change; don't repeatedly reshape 1440P bytes as a cached 720P frame.\n        self._native_screen_size = None\n        self.droidcast_width = self.droidcast_height = 0\n        if len(image) < 500:\n            logger.warning(f'Unexpected screenshot: {image}')\n        # Try to load as `DroidCast`\n        image = np.frombuffer(image, np.uint8)\n        if image is not None:\n            image = cv2.imdecode(image, cv2.IMREAD_COLOR)\n            if image is not None:\n                raise DroidCastVersionIncompatible(\n                    'Requesting screenshots from `DroidCast_raw` but server is `DroidCast`')\n        # ValueError: cannot reshape array of size 0 into shape (720,1280)\n        raise ImageTruncated(str(e))\n\n    # Convert RGB565 to RGB888\n    # https://blog.csdn.net/happy08god/article/details/10516871\n\n    # r = (arr & 0b1111100000000000) >> (11 - 3)\n    # g = (arr & 0b0000011111100000) >> (5 - 2)\n    # b = (arr & 0b0000000000011111) << 3\n    # r |= (r & 0b11100000) >> 5\n    # g |= (g & 0b11000000) >> 6\n    # b |= (b & 0b11100000) >> 5\n    # r = r.astype(np.uint8)\n    # g = g.astype(np.uint8)\n    # b = b.astype(np.uint8)\n    # image = cv2.merge([r, g, b])\n\n    # The same as the code above but costs about 2.7ms instead of 16ms.\n    # Note that cv2.convertScaleAbs is 5x fast as cv2.multiply, cv2.add is 8x fast as cv2.convertScaleAbs\n    # Note that cv2.convertScaleAbs includes rounding\n    tmp = np.empty_like(arr)\n    cv2.bitwise_and(arr, 0b1111100000000000, dst=tmp)\n    r = cv2.convertScaleAbs(tmp, alpha=0.0040283203125)  # 0.00390625 * 1.03125\n    cv2.bitwise_and(arr, 0b0000011111100000, dst=tmp)\n    g = cv2.convertScaleAbs(tmp, alpha=0.126953125)  # 0.125 * 1.015625\n    cv2.bitwise_and(arr, 0b0000000000011111, dst=tmp)\n    b = cv2.convertScaleAbs(tmp, alpha=8.25)  # 8 * 1.03125\n\n    image = cv2.merge([r, g, b])\n\n    return image\n"
+        }
+      ]
+    },
+    "module.device.method.hermit": {
+      "path": "module/device/method/hermit.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:Hermit:0",
+            "function:hermit_enable_accessibility:0"
+          ],
+          "before": "2afbb253c3302d0440ded90efdf11f440a5678afe1afa997d174a5a5dc885c1e",
+          "source": "def hermit_enable_accessibility(self):\n    \"\"\"\n    Turn on accessibility service for Hermit.\n\n    Raises:\n        RequestHumanTakeover: If failed and user should do it manually.\n    \"\"\"\n    logger.hr('Enable accessibility service')\n    interval = Timer(0.3)\n    timeout = Timer(10, count=10).start()\n    while 1:\n        h = self.dump_hierarchy_adb()\n        interval.wait()\n        interval.reset()\n\n        def appear(xpath):\n            return bool(HierarchyButton(h, xpath))\n\n        def appear_then_click(xpath):\n            b = HierarchyButton(h, xpath)\n            if b:\n                point = random_rectangle_point(b.button)\n                logger.info(f'Click {point2str(*point)} @ {b}')\n                # Android hierarchy bounds already use native pixels.\n                self.click_adb(*point, native=True)\n                return True\n            else:\n                return False\n\n        if appear_then_click('//*[@text=\"Hermit\" and @resource-id=\"android:id/title\"]'):\n            continue\n        if appear_then_click('//*[@class=\"android.widget.Switch\" and @checked=\"false\"]'):\n            continue\n        if appear_then_click('//*[@resource-id=\"android:id/button1\"]'):\n            # Just plain click here\n            # Can't use uiautomator once hermit has access to accessibility service,\n            # or uiautomator will get the access.\n            break\n        if appear('//*[@class=\"android.widget.Switch\" and @checked=\"true\"]'):\n            raise HermitError('Accessibility service already enable but get error')\n\n        # End\n        if timeout.reached():\n            logger.critical('Unable to turn on accessibility service for Hermit')\n            logger.critical(\n                '\\n\\n'\n                'Please do this manually:\\n'\n                '1. Find \"Hermit\" in accessibility setting and click it\\n'\n                '2. Turn it ON and click OK\\n'\n                '3. Switch back to AzurLane\\n'\n            )\n            raise RequestHumanTakeover\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Hermit:0",
+            "function:click_hermit:0"
+          ],
+          "before": "777d4de795716c8b6c31907dd8cf3130e3ce54a1c891ed77274e0a48172ead7e",
+          "source": "@retry\ndef click_hermit(self, x, y):\n    x, y = self.control_point(x, y)\n    self.hermit_send('/click', x=x, y=y)\n"
+        }
+      ]
+    },
+    "module.device.method.maatouch": {
+      "path": "module/device/method/maatouch.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "class:MaatouchBuilder:0",
+            "function:normalized_coordinates:0"
+          ],
+          "after": null,
+          "source": "@property\ndef normalized_coordinates(self):\n    # MaaTouch always consumes the pixel range from its handshake, even\n    # when ADB is being accessed through an HTTP uiautomator2 connection.\n    return False\n"
+        }
+      ]
+    },
+    "module.device.method.minitouch": {
+      "path": "module/device/method/minitouch.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "class:CommandBuilder:0",
+            "function:normalized_coordinates:0"
+          ],
+          "after": "function:__init__:0",
+          "source": "@property\ndef normalized_coordinates(self):\n    # atx-agent expects fractions of the display, not physical pixels.\n    return self.device.config.DEVICE_OVER_HTTP\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:CommandBuilder:0",
+            "function:convert:0"
+          ],
+          "before": "0118c9c00544a33031fa56ee393631b2202e3fe8368030e92b6681b0ea2e7e5d",
+          "source": "def convert(self, x, y):\n    max_x, max_y = self.device.max_x, self.device.max_y\n    orientation = self.orientation\n\n    if orientation == 0:\n        pass\n    elif orientation == 1:\n        x, y = 720 - y, x\n        max_x, max_y = max_y, max_x\n    elif orientation == 2:\n        x, y = 1280 - x, 720 - y\n    elif orientation == 3:\n        x, y = y, 1280 - x\n        max_x, max_y = max_y, max_x\n    else:\n        raise ScriptError(f'Invalid device orientation: {orientation}')\n\n    self.max_x, self.max_y = max_x, max_y\n    if not self.normalized_coordinates:\n        # Maximum X and Y coordinates may, but usually do not, match the display size.\n        x, y = int(x / 1280 * max_x), int(y / 720 * max_y)\n    else:\n        # When over http, max_x and max_y are default to 1280 and 720, skip matching display size\n        x, y = int(x), int(y)\n    return x, y\n"
+        }
+      ]
+    },
+    "module.device.method.nemu_ipc": {
+      "path": "module/device/method/nemu_ipc.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "class:NemuIpc:0",
+            "function:nemu_ipc_down:0"
+          ],
+          "after": "function:screenshot_nemu_ipc:0",
+          "source": "def nemu_ipc_down(self, x, y):\n    # NemuIpcImpl.down applies its own axis rotation after this conversion.\n    # Use its display size, including when called before the first screenshot.\n    ipc = self.nemu_ipc\n    if not ipc.width or not ipc.height:\n        ipc.get_resolution()\n    size = max(ipc.width, ipc.height), min(ipc.width, ipc.height)\n    self.set_screen_size(*size)\n    x, y = self.control_point(x, y, size=size)\n    ipc.down(x, y)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:NemuIpc:0",
+            "function:click_nemu_ipc:0"
+          ],
+          "before": "0acf2f8195f01cd75f9a929638c586ff1b5980ffed802bbbc05b3c6d723164fa",
+          "source": "def click_nemu_ipc(self, x, y):\n    down = ensure_time((0.010, 0.020))\n    self.nemu_ipc_down(x, y)\n    self.sleep(down)\n    self.nemu_ipc.up()\n    self.sleep(0.050 - down)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:NemuIpc:0",
+            "function:long_click_nemu_ipc:0"
+          ],
+          "before": "dbe9b15168e191c9358cb8361655e615746ba9d1bf179d9ed95db292e2a962af",
+          "source": "def long_click_nemu_ipc(self, x, y, duration=1.0):\n    self.nemu_ipc_down(x, y)\n    self.sleep(duration)\n    self.nemu_ipc.up()\n    self.sleep(0.050)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:NemuIpc:0",
+            "function:swipe_nemu_ipc:0"
+          ],
+          "before": "d8c2611c826a31c7581a2842d5c832611ea6faddea884e673b6a821285f09ece",
+          "source": "def swipe_nemu_ipc(self, p1, p2):\n    points = insert_swipe(p0=p1, p3=p2)\n\n    for point in points:\n        self.nemu_ipc_down(*point)\n        self.sleep(0.010)\n\n    self.nemu_ipc.up()\n    self.sleep(0.050)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:NemuIpc:0",
+            "function:drag_nemu_ipc:0"
+          ],
+          "before": "c77a4c12d2164d9b12d26fc8563a478d75aeee1ac55cc2bdc024cdc052483b4b",
+          "source": "def drag_nemu_ipc(self, p1, p2, point_random=(-10, -10, 10, 10), hold_duration=0.0):\n    p1 = np.array(p1) - random_rectangle_point(point_random)\n    p2 = np.array(p2) - random_rectangle_point(point_random)\n    points = insert_swipe(p0=p1, p3=p2, speed=20)\n\n    for point in points:\n        self.nemu_ipc_down(*point)\n        self.sleep(0.010)\n\n    self.nemu_ipc_down(*p2)\n    self.sleep(0.140)\n    self.nemu_ipc_down(*p2)\n    self.sleep(0.140)\n\n    hold_duration = ensure_time(hold_duration) - 0.28\n    if hold_duration > 0:\n        self.nemu_ipc_down(*p2)\n        self.sleep(hold_duration)\n\n    self.nemu_ipc.up()\n    self.sleep(0.050)\n"
+        }
+      ]
+    },
+    "module.device.method.scrcpy.control": {
+      "path": "module/device/method/scrcpy/control.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "statement:a0a5859c53cdd47e082f395883b6f132ec212c79593947e0bfad8bfd9e0dab4a:0"
+          ],
+          "after": "statement:2dffd94b0808cb8f477b4c40471529ce1249f9b22d5f701b06fa04a7ef9f6d52:0",
+          "source": "from module.device.resolution import ASSET_SIZE, scale_point\n"
+        },
+        {
+          "action": "add",
+          "path": [
+            "class:ControlSender:0",
+            "function:_control_point:0"
+          ],
+          "after": "function:resolution:0",
+          "source": "def _control_point(self, x, y):\n    source = ASSET_SIZE\n    if self.resolution[0] < self.resolution[1]:\n        # Screenshot normalizes portrait frames after rotating them. Input\n        # coordinates must undo that rotation in the stream's coordinate space.\n        orientation = self.parent.orientation\n        if orientation == 1:\n            x, y = ASSET_SIZE[1] - y, x\n            source = ASSET_SIZE[::-1]\n        elif orientation == 3:\n            x, y = y, ASSET_SIZE[0] - x\n            source = ASSET_SIZE[::-1]\n    x, y = scale_point(x, y, source, self.resolution)\n    return (max(0, min(int(x), self.resolution[0] - 1)),\n            max(0, min(int(y), self.resolution[1] - 1)))\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:ControlSender:0",
+            "function:touch:0"
+          ],
+          "before": "041fb0e19c8f7821ea80772aa898a07923527569d5b8db6f916360841e31fee9",
+          "source": "@inject(const.TYPE_INJECT_TOUCH_EVENT)\ndef touch(\n        self, x: int, y: int, action: int = const.ACTION_DOWN, touch_id: int = -1\n) -> bytes:\n    \"\"\"\n    Touch screen\n\n    Args:\n        x: horizontal position\n        y: vertical position\n        action: ACTION_DOWN | ACTION_UP | ACTION_MOVE\n        touch_id: Default using virtual id -1, you can specify it to emulate multi finger touch\n    \"\"\"\n    x, y = self._control_point(x, y)\n    return struct.pack(\n        \">BqiiHHHi\",\n        action,\n        touch_id,\n        int(x),\n        int(y),\n        int(self.resolution[0]),\n        int(self.resolution[1]),\n        0xFFFF,\n        1,\n    )\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:ControlSender:0",
+            "function:scroll:0"
+          ],
+          "before": "b6b9625a267684321164025fbcce1bf803fbaf26995763ab402f3d0e6e94749b",
+          "source": "@inject(const.TYPE_INJECT_SCROLL_EVENT)\ndef scroll(self, x: int, y: int, h: int, v: int) -> bytes:\n    \"\"\"\n    Scroll screen\n\n    Args:\n        x: horizontal position\n        y: vertical position\n        h: horizontal movement\n        v: vertical movement\n    \"\"\"\n\n    x, y = self._control_point(x, y)\n    return struct.pack(\n        \">iiHHii\",\n        int(x),\n        int(y),\n        int(self.resolution[0]),\n        int(self.resolution[1]),\n        int(h),\n        int(v),\n    )\n"
+        }
+      ]
+    },
+    "module.device.method.scrcpy.core": {
+      "path": "module/device/method/scrcpy/core.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:ScrcpyCore:0",
+            "assign:a5ff3551f65e86c3b50358dfa4291818901224a495dd8593ea503b07311bf2cf:0"
+          ],
+          "before": "3d872e653078dba6d56484743533d241cf122b4765b34def598884ccaab5b531",
+          "source": "_scrcpy_control_socket_lock = threading.RLock()\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:ScrcpyCore:0",
+            "function:_scrcpy_server_start:0"
+          ],
+          "before": "b4c7f2b1e13cf69f0f2c65acef5333be60002bcdf8a40e5b47c41f4749837fdb",
+          "source": "def _scrcpy_server_start(self):\n    \"\"\"\n    Connect to scrcpy server, there will be two sockets, video and control socket.\n\n    Raises:\n        ScrcpyError:\n        adbutils.AdbTimeout:\n        socket.timeout:\n    \"\"\"\n    logger.hr('Scrcpy server start')\n    commands = ScrcpyOptions.command_v120(\n        jar_path=self.config.SCRCPY_FILEPATH_REMOTE, max_size=max(self.native_screen_size))\n    self._scrcpy_server_stream: AdbConnection = self.adb.shell(\n        commands,\n        stream=True,\n    )\n    self._scrcpy_server_stream.conn.settimeout(3)\n\n    logger.info('Create server stream')\n    ret = self._scrcpy_server_stream.read(10)\n    # b'Aborted \\r\\n'\n    # Probably because file not exists\n    if b'Aborted' in ret:\n        raise ScrcpyError('Aborted')\n    if ret == b'[server] E':\n        # [server] ERROR: ...\n        ret += recv_all(self._scrcpy_server_stream)\n        logger.error(ret)\n        # java.lang.IllegalArgumentException: The server version (1.25) does not match the client (...)\n        if b'does not match the client' in ret:\n            raise ScrcpyError('Server version does not match the client')\n        else:\n            raise ScrcpyError('Unknown scrcpy error')\n    else:\n        # [server] INFO: Device: ...\n        ret += self._scrcpy_receive_from_server_stream()\n        logger.info(ret)\n        pass\n\n    logger.info('Create video socket')\n    timeout = Timer(3).start()\n    while 1:\n        if timeout.reached():\n            raise ScrcpyError('Connect scrcpy-server timeout')\n\n        try:\n            self._scrcpy_video_socket = self.adb.create_connection(\n                Network.LOCAL_ABSTRACT, \"scrcpy\"\n            )\n            self._scrcpy_video_socket.settimeout(3)\n            break\n        except AdbError:\n            sleep(0.1)\n    dummy_byte = self._scrcpy_video_socket.recv(1)\n    if not len(dummy_byte) or dummy_byte != b\"\\x00\":\n        raise ScrcpyError('Did not receive Dummy Byte from video stream')\n\n    logger.info('Create control socket')\n    self._scrcpy_control_socket = self.adb.create_connection(\n        Network.LOCAL_ABSTRACT, \"scrcpy\"\n    )\n    self._scrcpy_control_socket.settimeout(3)\n\n    logger.info('Fetch device info')\n    device_name = self._scrcpy_video_socket.recv(64).decode(\"utf-8\").rstrip(\"\\x00\")\n    if len(device_name):\n        logger.attr('Scrcpy Device', device_name)\n    else:\n        raise ScrcpyError('Did not receive Device Name')\n    ret = self._scrcpy_video_socket.recv(4)\n    self._scrcpy_resolution = struct.unpack(\">HH\", ret)\n    logger.attr('Scrcpy Resolution', self._scrcpy_resolution)\n\n    self._scrcpy_video_socket.setblocking(False)\n    self._scrcpy_alive = True\n\n    logger.info('Start video stream loop thread')\n    self._scrcpy_stream_loop_thread = threading.Thread(\n        target=self._scrcpy_stream_loop, daemon=True\n    )\n    self._scrcpy_stream_loop_thread.start()\n    while 1:\n        if self._scrcpy_stream_loop_thread is not None and self._scrcpy_stream_loop_thread.is_alive():\n            break\n        self.sleep(0.001)\n\n    logger.info('Scrcpy server is up')\n"
+        }
+      ]
+    },
+    "module.device.method.scrcpy.options": {
+      "path": "module/device/method/scrcpy/options.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:ScrcpyOptions:0",
+            "function:codec_options:0"
+          ],
+          "before": "5a802e916feabc6fca22a7319137f396d673ebcbdef51509e8441ce942513e97",
+          "source": "@classmethod\ndef codec_options(cls, max_size=1280) -> str:\n    \"\"\"\n    Custom codec options passing through scrcpy.\n    https://developer.android.com/reference/android/media/MediaFormat\n\n    Returns:\n        key_profile=1,key_level=4096,...\n    \"\"\"\n    options = dict(\n        # H.264 profile and level\n        # https://developer.android.com/reference/android/media/MediaCodecInfo.CodecProfileLevel\n        # Baseline, which only has I/P frames\n        key_profile=1,\n        # 1440P exceeds the per-frame macroblock limit of level 4.1.\n        # Keep the old level for 720P encoders and use level 5 for 1440P.\n        key_level=4096 if max_size <= 1280 else 16384,\n        # Max quality\n        key_quality=100,\n        # https://developer.android.com/reference/android/media/MediaCodecInfo.EncoderCapabilities\n        # Constant quality\n        key_bitrate_mode=0,\n        # A zero value means a stream containing all key frames is requested.\n        key_i_frame_interval=0,\n        # https://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities\n        # COLOR_Format24bitBGR888\n        key_color_format=12,\n        # The same as output frame rate to lower CPU consumption\n        key_capture_rate=cls.frame_rate,\n        # 20Mbps, the maximum output bitrate of scrcpy\n        key_bit_rate=20000000,\n    )\n    return ','.join([f'{k}={v}' for k, v in options.items()])\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:ScrcpyOptions:0",
+            "function:arguments:0"
+          ],
+          "before": "0f23c0cd10fbfaa97318e9b292ab838d85d95a2e4baf049569e6fc16c1efbb46",
+          "source": "@classmethod\ndef arguments(cls, max_size=1280) -> t.List[str]:\n    \"\"\"\n    https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/Server.java\n    https://github.com/Genymobile/scrcpy/blob/master/server/src/main/java/com/genymobile/scrcpy/Options.java\n\n    Returns:\n        ['log_level=info', 'max_size=1280', ...]\n    \"\"\"\n    options = [\n        'log_level=info',\n        f'max_size={max_size}',\n        # 20Mbps, the maximum output bitrate of scrcpy\n        # If a higher value is set, scrcpy fallback to 8Mbps default.\n        'bit_rate=20000000',\n        # Screenshot time cost <= 300ms is enough for human speed.\n        f'max_fps={cls.frame_rate}',\n        # No orientation lock\n        f'lock_video_orientation={const.LOCK_SCREEN_ORIENTATION_UNLOCKED}',\n        # Always true\n        'tunnel_forward=true',\n        # Always true for controlling via scrcpy\n        'control=true',\n        # Default to 0\n        'display_id=0',\n        # Useless, always false\n        'show_touches=false',\n        # Not determined, leave it as default\n        'stay_awake=false',\n        # Encoder name\n        # Should in [\n        #     \"OMX.google.h264.encoder\",\n        #     \"OMX.qcom.video.encoder.avc\",\n        #     \"c2.qti.avc.encoder\",\n        #     \"c2.android.avc.encoder\",\n        # ]\n        # Empty value, let scrcpy to decide\n        # 'encoder_name=',\n        # Codec options\n        f'codec_options={cls.codec_options(max_size=max_size)}',\n        # Useless, always false\n        'power_off_on_close=false',\n        'clipboard_autosync=false',\n        'downsize_on_error=false',\n    ]\n    return options\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:ScrcpyOptions:0",
+            "function:command_v125:0"
+          ],
+          "before": "64bdfcccdbeaf9f0e29f6d82f142e530d2ce0942c3e49b1889478c3fb7da4dde",
+          "source": "@classmethod\ndef command_v125(cls, jar_path='/data/local/tmp/scrcpy-server.jar', max_size=1280) -> t.List[str]:\n    \"\"\"\n    Generate the commands to run scrcpy.\n    \"\"\"\n    commands = [\n        f'CLASSPATH={jar_path}',\n        'app_process',\n        '/',\n        'com.genymobile.scrcpy.Server',\n        '1.25',\n    ]\n    commands += cls.arguments(max_size=max_size)\n    return commands\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:ScrcpyOptions:0",
+            "function:command_v120:0"
+          ],
+          "before": "b7d87cf378e034b4fbae0db379c412825b4436307a67ed06fc6a40da546811ef",
+          "source": "@classmethod\ndef command_v120(cls, jar_path='/data/local/tmp/scrcpy-server.jar', max_size=1280) -> t.List[str]:\n    commands = [\n        f\"CLASSPATH={jar_path}\",\n        \"app_process\",\n        \"/\",\n        \"com.genymobile.scrcpy.Server\",\n        \"1.20\",  # Scrcpy server version\n        \"info\",  # Log level: info, verbose...\n        str(max_size),  # Preserve the native screen width (long side)\n        f\"20000000\",  # Bitrate of video\n        f\"{cls.frame_rate}\",  # Max frame per second\n        f\"{const.LOCK_SCREEN_ORIENTATION_UNLOCKED}\",  # Lock screen orientation: LOCK_SCREEN_ORIENTATION\n        \"true\",  # Tunnel forward\n        \"-\",  # Crop screen\n        \"false\",  # Send frame rate to client\n        \"true\",  # Control enabled\n        \"0\",  # Display id\n        \"false\",  # Show touches\n        \"false\",  # Stay awake\n        cls.codec_options(max_size=max_size),  # Codec (video encoding) options\n        \"-\",  # Encoder name\n        \"false\",  # Power off screen after server closed\n    ]\n    return commands\n"
+        }
+      ]
+    },
+    "module.device.method.uiautomator_2": {
+      "path": "module/device/method/uiautomator_2.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:Uiautomator2:0",
+            "function:click_uiautomator2:0"
+          ],
+          "before": "6137ee4c9d38e42bedee6f2c9af7a0c69fb3e2118aeba13b91af548f55a74503",
+          "source": "@retry\ndef click_uiautomator2(self, x, y):\n    x, y = self.control_point(x, y)\n    self.u2.click(x, y)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Uiautomator2:0",
+            "function:long_click_uiautomator2:0"
+          ],
+          "before": "f9fc2646e96c0fef52858998f46b47148c6db6aa96ea1e9ab53a8208834dae40",
+          "source": "@retry\ndef long_click_uiautomator2(self, x, y, duration=(1, 1.2)):\n    x, y = self.control_point(x, y)\n    self.u2.long_click(x, y, duration=duration)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Uiautomator2:0",
+            "function:swipe_uiautomator2:0"
+          ],
+          "before": "259e38894951876647847b8bc87349331c2851ff754284511daf8c10677226b3",
+          "source": "@retry\ndef swipe_uiautomator2(self, p1, p2, duration=0.1):\n    p1, p2 = self.control_point(*p1), self.control_point(*p2)\n    self.u2.swipe(*p1, *p2, duration=duration)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Uiautomator2:0",
+            "function:_drag_along:0"
+          ],
+          "before": "f4f4d194fe6a9d1aad508ef57a3494f4e8609e8ad014267bc1a58dc930adc226",
+          "source": "@retry\ndef _drag_along(self, path):\n    \"\"\"Swipe following path.\n\n    Args:\n        path (list): (x, y, sleep)\n\n    Examples:\n        al.drag_along([\n            (403, 421, 0.2),\n            (821, 326, 0.1),\n            (821, 326-10, 0.1),\n            (821, 326+10, 0.1),\n            (821, 326, 0),\n        ])\n        Equals to:\n        al.device.touch.down(403, 421)\n        time.sleep(0.2)\n        al.device.touch.move(821, 326)\n        time.sleep(0.1)\n        al.device.touch.move(821, 326-10)\n        time.sleep(0.1)\n        al.device.touch.move(821, 326+10)\n        time.sleep(0.1)\n        al.device.touch.up(821, 326)\n    \"\"\"\n    length = len(path)\n    for index, data in enumerate(path):\n        x, y, second = data\n        x, y = self.control_point(x, y)\n        if index == 0:\n            self.u2.touch.down(x, y)\n            logger.info(point2str(x, y) + ' down')\n        elif index - length == -1:\n            self.u2.touch.up(x, y)\n            logger.info(point2str(x, y) + ' up')\n        else:\n            self.u2.touch.move(x, y)\n            logger.info(point2str(x, y) + ' move')\n        self.sleep(second)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Uiautomator2:0",
+            "function:resolution_check_uiautomator2:0"
+          ],
+          "before": "64f49e7edb5c7c8fc2b85c9240928de4f8d7b000fb1e3e76c2e1b9883e38caca",
+          "source": "def resolution_check_uiautomator2(self):\n    \"\"\"\n    Alas does not actively check resolution but the width and height of screenshots.\n    However, some screenshot methods do not provide device resolution, so check it here.\n\n    Returns:\n        (width, height)\n\n    Raises:\n        RequestHumanTakeover: If resolution is neither 1280x720 nor 2560x1440\n    \"\"\"\n    width, height = self.resolution_uiautomator2()\n    logger.attr('Screen_size', f'{width}x{height}')\n    self.set_screen_size(width, height)\n    return width, height\n"
+        }
+      ]
+    },
+    "module.device.screenshot": {
+      "path": "module/device/screenshot.py",
+      "operations": [
+        {
+          "action": "add",
+          "path": [
+            "statement:2002d713b58143df18547299cd4204cb7d4cf1bddadfa94db6dd8e29c08cb3fe:0"
+          ],
+          "after": "statement:bfabdb0a48fbecba1e5babb587f523344f7204f854ec57732e22b353501119be:0",
+          "source": "from module.device.resolution import ASSET_SIZE, SUPPORTED_SCREEN_SIZES, landscape_size, normalize_screenshot\n"
+        },
+        {
+          "action": "add",
+          "path": [
+            "class:Screenshot:0",
+            "annotation:5744e10c67ef787a3fcc72f381df1263ecc680d6d970f04aafe16b2b108868c0:0"
+          ],
+          "after": "annotation:a63e697ba0c7bffd284d2c575a97b34a306808978d68b706c534d808e8c854e2:0",
+          "source": "image_native: np.ndarray\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Screenshot:0",
+            "function:screenshot:0"
+          ],
+          "before": "250bc26bbfb261979fd4f6eefad5fe926599ae08d5366d51c04fc7f53750aeea",
+          "source": "def screenshot(self):\n    \"\"\"\n    Returns:\n        np.ndarray:\n    \"\"\"\n    self._screenshot_interval.wait()\n    self._screenshot_interval.reset()\n\n    for _ in range(2):\n        if self.screenshot_method_override:\n            method = self.screenshot_method_override\n        else:\n            method = self.config.Emulator_ScreenshotMethod\n        method = self.screenshot_methods.get(method, self.screenshot_adb)\n        self.image = method()\n\n        self.image = self._handle_orientated_image(self.image)\n        size_valid = self.check_screen_size()\n        self.image_native = self.image\n        self.image = normalize_screenshot(self.image)\n\n        if self.config.Emulator_ScreenshotDedithering:\n            # This will take 40-60ms\n            cv2.fastNlMeansDenoising(self.image, self.image, h=17, templateWindowSize=1, searchWindowSize=2)\n\n        if self.config.Error_SaveError:\n            self.screenshot_deque.append({'time': datetime.now(), 'image': self.image})\n\n        if size_valid and self.check_screen_black():\n            break\n        else:\n            continue\n\n    return self.image\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Screenshot:0",
+            "function:_handle_orientated_image:0"
+          ],
+          "before": "ecac5dd25e93f1cfbc3101e4cdfe062e3caf43496101078e66b70b48d21f1d53",
+          "source": "def _handle_orientated_image(self, image):\n    \"\"\"\n    Args:\n        image (np.ndarray):\n\n    Returns:\n        np.ndarray:\n    \"\"\"\n    width, height = image_size(image)\n    if (width, height) in SUPPORTED_SCREEN_SIZES:\n        return image\n\n    # Several backends already return landscape pixels on portrait devices.\n    # Rotating those again would turn a valid 1440P frame on its side.\n    if self.orientation == 0:\n        pass\n    elif self.orientation == 1:\n        image = cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)\n    elif self.orientation == 2:\n        image = cv2.rotate(image, cv2.ROTATE_180)\n    elif self.orientation == 3:\n        image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)\n    else:\n        raise ScriptError(f'Invalid device orientation: {self.orientation}')\n\n    return image\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Screenshot:0",
+            "function:check_screen_size:0"
+          ],
+          "before": "5ab7ebd8f0683d81c746a0a2e4d571192bcd033b51a9f19835e88121a813da3b",
+          "source": "def check_screen_size(self):\n    \"\"\"\n    Validate native resolution before normalizing to asset coordinates.\n    Take a screenshot before call.\n    \"\"\"\n    orientated = False\n    for _ in range(2):\n        # Check screen size\n        width, height = image_size(self.image)\n        if not self._screen_size_checked or landscape_size(width, height) != self._native_screen_size:\n            logger.attr('Screen_size', f'{width}x{height}')\n        if (width, height) in SUPPORTED_SCREEN_SIZES:\n            self.set_screen_size(width, height)\n            self._screen_size_checked = True\n            return True\n        elif not orientated and landscape_size(width, height) in SUPPORTED_SCREEN_SIZES:\n            logger.info('Received orientated screenshot, handling')\n            self.get_orientation()\n            self.image = self._handle_orientated_image(self.image)\n            orientated = True\n            width, height = image_size(self.image)\n            if width < height:\n                logger.info('Unable to handle orientated screenshot, continue for now')\n                return True\n            else:\n                continue\n        elif self.config.Emulator_Serial == 'wsa-0':\n            self.display_resize_wsa(0)\n            return False\n        elif hasattr(self, 'app_is_running') and not self.app_is_running():\n            logger.warning('Received orientated screenshot, game not running')\n            return True\n        else:\n            logger.critical(f'Resolution not supported: {width}x{height}')\n            logger.critical('Please set emulator resolution to 1280x720 or 2560x1440')\n            raise RequestHumanTakeover\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:Screenshot:0",
+            "function:check_screen_black:0"
+          ],
+          "before": "0f27ffa787c524b08c1ba45c5c949cd085546c1f1d8932659192e0dc9ccd9f5e",
+          "source": "def check_screen_black(self):\n    if self._screen_black_checked:\n        return True\n    # Check screen color\n    # May get a pure black screenshot on some emulators.\n    color = get_color(self.image, area=(0, 0, *ASSET_SIZE))\n    if sum(color) < 1:\n        if self.config.Emulator_Serial == 'wsa-0':\n            for _ in range(2):\n                display = self.get_display_id()\n                if display == 0:\n                    return True\n            logger.info(f'Game running on display {display}')\n            logger.warning('Game not running on display 0, will be restarted')\n            self.app_stop_uiautomator2()\n            return False\n        elif self.config.Emulator_ScreenshotMethod == 'uiautomator2':\n            logger.warning(f'Received pure black screenshots from emulator, color: {color}')\n            logger.warning('Uninstall minicap and retry')\n            self.uninstall_minicap()\n            self._screen_black_checked = False\n            return False\n        else:\n            logger.warning(f'Received pure black screenshots from emulator, color: {color}')\n            logger.warning(f'Screenshot method `{self.config.Emulator_ScreenshotMethod}` '\n                           f'may not work on emulator `{self.serial}`, or the emulator is not fully started')\n            if self.is_mumu_family:\n                if self.config.Emulator_ScreenshotMethod == 'DroidCast':\n                    self.droidcast_stop()\n                else:\n                    logger.warning('If you are using MuMu X, please upgrade to version >= 12.1.5.0')\n            self._screen_black_checked = False\n            return False\n    else:\n        self._screen_black_checked = True\n        return True\n"
+        }
+      ]
+    },
+    "module.dorm.dorm": {
+      "path": "module/dorm/dorm.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:RewardDorm:0",
+            "function:_dorm_feed_long_tap:2"
+          ],
+          "before": "960cba820795f9129fe65d0dd759fa847bda6a075d6280deef44bccb90aa49eb",
+          "source": "@Config.when(DEVICE_CONTROL_METHOD='uiautomator2')\ndef _dorm_feed_long_tap(self, button, count):\n    timeout = Timer(count // 5 + 5).start()\n    x, y = random_rectangle_point(button.button)\n    x, y = self.device.control_point(x, y)\n    self.device.u2.touch.down(x, y)\n\n    while 1:\n        self.device.u2.touch.move(x, y)\n        time.sleep(.01)\n        self.device.screenshot()\n\n        if not self._dorm_has_food(button) \\\n                or self.handle_info_bar() \\\n                or self.appear(POPUP_CONFIRM, offset=self._popup_offset):\n            break\n        if timeout.reached():\n            logger.warning('Wait dorm feed timeout')\n            break\n\n    self.device.u2.touch.up(x, y)\n"
+        },
+        {
+          "action": "replace",
+          "path": [
+            "class:RewardDorm:0",
+            "function:_dorm_feed_long_tap:3"
+          ],
+          "before": "1179a8ab6851d9d58dbc9d3890a537b5d88b7531bdb68e1e5fc2529d315498fa",
+          "source": "@Config.when(DEVICE_CONTROL_METHOD='nemu_ipc')\ndef _dorm_feed_long_tap(self, button, count):\n    timeout = Timer(count // 5 + 5).start()\n    x, y = random_rectangle_point(button.button)\n\n    while 1:\n        self.device.nemu_ipc_down(x, y)\n        time.sleep(.01)\n        self.device.screenshot()\n\n        if not self._dorm_has_food(button) \\\n                or self.handle_info_bar() \\\n                or self.appear(POPUP_CONFIRM, offset=self._popup_offset):\n            break\n        if timeout.reached():\n            logger.warning('Wait dorm feed timeout')\n            break\n\n    self.device.nemu_ipc.up()\n"
+        }
+      ]
+    },
+    "module.handler.login": {
+      "path": "module/handler/login.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:LoginHandler:0",
+            "function:get_for_any_ele:0"
+          ],
+          "before": "f883eae1e70875694cfe8dbb002d9b22d4acddf39aeec3c7ec715134e6d943c7",
+          "source": "def get_for_any_ele(self, list_u2_path: list) -> Union[bool, tuple]:\n    \"\"\"\n    Args:\n        list_u2_path (list): [UiObject or XPathSelector]  In this case, len(list_u2_path) >= 1\n    Returns:\n        bool: False if wait failed\n        tuple: (bounds): if wait success\n    \"\"\"\n    for path in list_u2_path:\n        try:\n            if isinstance(path, UiObject):\n                if path.exists():\n                    return self.device.logical_area(path.bounds())\n                elif not path.exists():\n                    continue\n            elif isinstance(path, XPathSelector):\n                if path.exists:\n                    return self.device.logical_area(path.bounds)\n                elif not path.exists:\n                    continue\n        except XPathElementNotFoundError:\n            continue\n    return False\n"
+        }
+      ]
+    },
+    "module.map_detection.grid_predictor": {
+      "path": "module/map_detection/grid_predictor.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:GridPredictor:0",
+            "function:image_homo:0"
+          ],
+          "before": "59868ac90dc27d5274e68f6aa3da93b3341cc9fe44fa6fd8fc6884206aca228b",
+          "source": "@cached_property\ndef image_homo(self):\n    image_edge = rgb2gray(self.image_trans)\n    image_edge = cv2.Canny(image_edge, 100, 150)\n    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))\n    cv2.morphologyEx(image_edge, cv2.MORPH_CLOSE, kernel, dst=image_edge)\n    return image_edge\n"
+        }
+      ]
+    }
+  }
+}

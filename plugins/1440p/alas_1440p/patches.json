@@ -527,6 +527,20 @@
           "source": "def get(self, main):\n    from alas_1440p.recognition import match_1440p\n    title = main.appear(CLEAR_MODE_TITLE, offset=(20, 20)) or match_1440p(main, CLEAR_MODE_TITLE)\n    if not title:\n        return 'unknown'\n    CLEAR_MODE_CHECK.load_offset(CLEAR_MODE_TITLE)\n    if main.image_color_count(CLEAR_MODE_CHECK.button, color=(130, 229, 255), threshold=30, count=50):\n        return 'on'\n    if main.image_color_count(CLEAR_MODE_CHECK.button, color=(255, 255, 255), threshold=30, count=200):\n        return 'off'\n    return 'unknown'\n"
         }
       ]
+    },
+    "module.handler.info_handler": {
+      "path": "module/handler/info_handler.py",
+      "operations": [
+        {
+          "action": "replace",
+          "path": [
+            "class:InfoHandler:0",
+            "function:handle_game_tips:0"
+          ],
+          "before": "5707bad8d3076fd680a525dad9fb781fc89114b5648b60090f45709c32b8441f",
+          "source": "def handle_game_tips(self):\n    \"\"\"\n    Returns:\n        bool: If handled\n    \"\"\"\n    from alas_1440p.recognition import is_dock_full_popup\n    if is_dock_full_popup(self):\n        return False\n    if self.appear(GAME_TIPS, offset=(20, 20), interval=2) and self.image_color_count(\n            GAME_TIPS.button, color=(40, 40, 40), threshold=15, count=50):\n        self.device.click(GAME_TIPS)\n        return True\n    if self.appear(GAME_TIPS3, offset=(20, 20), interval=2) and self.image_color_count(\n            GAME_TIPS3.button, color=(40, 40, 40), threshold=15, count=50):\n        self.device.click(GAME_TIPS)\n        return True\n    if self.appear(GAME_TIPS4, offset=(20, 20), interval=2) and self.image_color_count(\n            GAME_TIPS4.button, color=(40, 40, 40), threshold=15, count=50):\n        self.device.click(GAME_TIPS)\n        return True\n\n    return False\n"
+        }
+      ]
     }
   }
 }

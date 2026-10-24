@@ -55,3 +55,18 @@ class HighResolutionSwitch(Switch):
             if match_1440p(main, data['check_button'], data['offset']):
                 return data['state']
         return 'unknown'
+
+
+def is_dock_full_popup(main):
+    """Let upstream retirement handle a full-dock modal before countdown tips.
+
+    On CN 1440P the dimmed event backdrop can match GAME_TIPS4's tiny digit.
+    Require both existing dock controls; keep their thresholds and actions.
+    """
+    if server.server != 'cn' or getattr(main.device, '_native_screen_size', None) != (2560, 1440):
+        return False
+    if main.device.image.shape[:2] != (720, 1280):
+        return False
+    from module.retire.assets import RETIRE_APPEAR_1, RETIRE_APPEAR_3
+    return (main.appear(RETIRE_APPEAR_1, offset=(20, 20))
+            and main.appear(RETIRE_APPEAR_3, offset=(20, 20)))

@@ -1,4 +1,4 @@
-# Alas 1440P 外置插件 0.1.1
+# Alas 1440P 外置插件 0.1.2
 
 在原版 720P Alas 上加载 2560×1440 兼容层，保留 1280×720 支持。
 原版源码、启动器、游戏资源和在线更新继续由上游管理；插件独立安装、停用和卸载。
@@ -6,6 +6,12 @@
 原版没有通用设备插件 API。此插件通过 Python 的 `.pth` 启动入口注册导入适配器，
 在内存中加载 1440P 兼容逻辑。安装位置为所选 Python 环境的 `site-packages`，
 原版 Git 跟踪的文件保持不变。
+
+## 0.1.2 修复
+
+修复国服1440P活动图出击时，船坞已满弹窗被后台倒计时模板误识别、导致
+`MAP_PREPARATION / GAME_TIPS` 双按钮循环的问题。仅在原版整理与强化按钮均匹配时，
+让船坞弹窗优先进入原版处理逻辑，保留用户的强化/退役选择和原匹配阈值。
 
 ## 0.1.1 修复
 
@@ -24,7 +30,7 @@ Windows 自带 Python 3.7.6、MuMu12、2560×1440/360 DPI、nemu_ipc 截图和 m
 2. 解压本插件，双击 `install-plugin.cmd`，输入原版 Alas 的目录。
    插件会使用该目录的 `toolkit\python.exe` 安装并检查启动加载能力。
 3. 将模拟器设置为 1280×720 或 2560×1440，继续通过**原版 `Alas.exe`** 启动。
-   成功加载时会输出 `[Alas 1440P plugin 0.1.1] active`。
+   成功加载时会输出 `[Alas 1440P plugin 0.1.2] active`。
 
 也可以在命令行安装：
 
@@ -100,7 +106,7 @@ Windows 自带 Python 3.7.6、MuMu12、2560×1440/360 DPI、nemu_ipc 截图和 m
 
 适配基线为上游 `master@4d88c22d875de3192f8cae2f993e4fe0593114e0`；
 兼容逻辑来自原 `feature/1440p-support@2efcbcb4d07bcff5798e577e9f26c4d6d30dc6a4`。
-`alas_1440p/patches.json` 保存 18 个模块、49 处适配的结构校验和代码。
+`alas_1440p/patches.json` 保存 19 个模块、50 处适配的结构校验和代码。
 加载器仅改写内存中的语法树，不覆盖上游文件或缓存修改后的 `.pyc`。
 
 使用已有 Alas 测试环境运行：
@@ -115,5 +121,5 @@ ALAS_PLUGIN_TEST_ROOT=/path/to/official/Alas python -m pytest tests /path/to/off
 python tools/generate_manifest.py --repo /path/to/AzurLaneAutoScript
 ```
 
-当前 Windows 回归：1486 passed、8 skipped；详情见 `VALIDATION.md`。
+当前 Windows 回归：1492 passed、8 skipped；详情见 `VALIDATION.md`。
 插件及衍生代码遵循仓库的 GPL-3.0 许可，见 `LICENSE`。

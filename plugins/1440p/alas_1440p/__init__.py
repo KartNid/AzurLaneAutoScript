@@ -1,5 +1,5 @@
 """Optional 1440P adapter for an otherwise unmodified Alas installation."""
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 def autoload():

@@ -62,11 +62,27 @@ def is_dock_full_popup(main):
 
     On CN 1440P the dimmed event backdrop can match GAME_TIPS4's tiny digit.
     Require both existing dock controls; keep their thresholds and actions.
+    A preparation click may leave an opening-animation frame without controls.
     """
     if server.server != 'cn' or getattr(main.device, '_native_screen_size', None) != (2560, 1440):
         return False
     if main.device.image.shape[:2] != (720, 1280):
         return False
     from module.retire.assets import RETIRE_APPEAR_1, RETIRE_APPEAR_3
-    return (main.appear(RETIRE_APPEAR_1, offset=(20, 20))
-            and main.appear(RETIRE_APPEAR_3, offset=(20, 20)))
+
+    def controls_visible():
+        return (main.appear(RETIRE_APPEAR_1, offset=(20, 20))
+                and main.appear(RETIRE_APPEAR_3, offset=(20, 20)))
+
+    if controls_visible():
+        return True
+    history = getattr(main.device, 'click_record', ())
+    if history and history[-1] == 'MAP_PREPARATION':
+        from module.handler.assets import GAME_TIPS4
+        if main.appear(GAME_TIPS4, offset=(20, 20)):
+            # Do not dismiss a modal using its transient opening frame. Refresh
+            # once, then let the ordinary handlers use the same settled image.
+            main.device.sleep(0.5)
+            main.device.screenshot()
+            return controls_visible()
+    return False

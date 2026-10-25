@@ -67,3 +67,59 @@ def test_blank_screen_neither_clicks_nor_opens_dock():
     assert not obj.handle_game_tips()
     assert not obj.appear(RETIRE_APPEAR_1, offset=(20, 20))
     assert clicks == []
+
+
+def transition_handler(last_click='MAP_PREPARATION', settled=None):
+    image = np.array(Image.open(str(FIXTURE.with_name('dock_full_opening.png'))).convert('RGB'))
+    obj, clicks = handler(image=image)
+    operations = []
+    obj.device.click_record = [last_click]
+    obj.device.sleep = lambda seconds: operations.append(('sleep', seconds))
+
+    def screenshot():
+        operations.append(('screenshot',))
+        if settled is None:
+            obj.device.image = np.array(Image.open(str(FIXTURE)).convert('RGB'))
+        else:
+            obj.device.image = settled.copy()
+
+    obj.device.screenshot = screenshot
+    return obj, clicks, operations
+
+
+def test_real_opening_animation_refreshes_before_tip_click():
+    obj, clicks, operations = transition_handler()
+    assert obj.appear(GAME_TIPS4, offset=(20, 20))
+    assert not obj.appear(RETIRE_APPEAR_1, offset=(20, 20))
+    assert not obj.handle_game_tips()
+    assert clicks == []
+    assert operations == [('sleep', 0.5), ('screenshot',)]
+
+
+def test_opening_animation_reaches_configured_enhancement():
+    obj, clicks, operations = transition_handler()
+    assert not obj.handle_retirement()
+    assert clicks == [RETIRE_APPEAR_3]
+
+
+def test_other_click_context_does_not_wait():
+    obj, clicks, operations = transition_handler(last_click='DOCK_FILTER')
+    assert obj.handle_game_tips()
+    assert len(clicks) == 1
+    assert operations == []
+
+
+def test_tip_not_blocked_if_refresh_does_not_find_dock_modal():
+    opening = np.array(Image.open(str(FIXTURE.with_name('dock_full_opening.png'))).convert('RGB'))
+    obj, clicks, operations = transition_handler(settled=opening)
+    assert obj.handle_game_tips()
+    assert len(clicks) == 1
+    assert operations == [('sleep', 0.5), ('screenshot',)]
+
+
+def test_720p_animation_does_not_refresh():
+    obj, clicks, operations = transition_handler()
+    obj.device._native_screen_size = (1280, 720)
+    assert obj.handle_game_tips()
+    assert len(clicks) == 1
+    assert operations == []
